@@ -1,3 +1,4 @@
 # database practice
 
-### 한 때 DBA를 꿈꿧던 자의 DB study repository입니다. 
+개인 database 공부 repository입니다.
+
