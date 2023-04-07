@@ -1,0 +1,112 @@
+select * from table1;
+
+insert into table1 (column1, column2) 
+values ('b', 'bb');
+select * from table1;
+
+update table1 set column1 = 'z';
+select * from table1;
+
+# 테이블의 특정 row만 데이터를 수정하기
+update table1 set column2 = 'y' where column2 = 'aa';  
+select * from table1;
+
+update table1
+set column2 = 'x'
+, column3 = 'xx'
+where column2 = 'bb';
+
+delete from table1 where column2 = 'aa1';
+select * from table1;
+
+# 테스트용 테이블 생성
+drop table if exists day_visitor_realtime;
+create table if not exists day_visitor_realtime(
+  id bigint auto_increment primary key,
+  ipaddress varchar(15),
+  iptime_first datetime default now(), 
+  before_url varchar(250),
+  device_info varchar(40),
+  os_info varchar(40),
+  session_id varchar(80)
+);
+
+# now는 현재 시각을 반환한다.
+desc day_visitor_realtime;
+
+# 테이블에 데이터 삽입하기(길이를 초과하지 않기)
+insert into day_visitor_realtime (
+  ipaddress, before_url, device_info
+)
+values (
+  '192.168.0.1', 'https://www.google.com', 'iphone'
+);
+
+select * from day_visitor_realtime;
+
+# 길이를 초과하게
+insert into day_visitor_realtime (
+  ipaddress, before_url, device_info
+)
+values (
+  '192.168.100.1000', 'https://www.google.com', 'iphone'
+);
+select * from day_visitor_realtime;
+
+drop table if exists day_visitor_realtime;
+create table if not exists day_visitor_realtime(
+  id bigint auto_increment primary key,
+  ipaddress varchar(15) not null,
+  iptime_first datetime default now(), 
+  before_url varchar(250),
+  device_info varchar(40),
+  os_info varchar(40),
+  session_id varchar(80)
+);
+desc day_visitor_realtime;
+
+# primary key
+# 제약 조건 not null
+drop table if exists day_visitor_realtime;
+create table if not exists day_visitor_realtime(
+  id bigint auto_increment primary key,
+  ipaddress varchar(15) not null,
+  iptime_first datetime default now(), 
+  before_url varchar(250),
+  device_info varchar(40),
+  os_info varchar(40),
+  session_id varchar(80)
+);
+desc day_visitor_realtime;
+
+insert into day_visitor_realtime(
+  id, ipaddress, before_url, device_info
+)
+values(
+1, '192.168.0.2', 'https://www.naver.com', 'galaxy'
+);
+select * from day_visitor_realtime;
+  
+# Foreign key
+# 참조할 테이블 생성
+create table orders (
+order_id int,
+customer_id int,
+order_date datetime,
+primary key(order_id)
+);
+desc orders;  
+
+insert into orders values (1, 1, now());
+select * from orders;
+
+# orders 참조하는 테이블 생성
+create table order_detail(
+  order_id int, 
+  product_id int,
+  product_name varchar(200),
+  constraint FK_ORDERS_ORDERID foreign key (order_id) 
+  references orders
+);
+
+insert into order_detail values (1, 2023, 'iphone');
