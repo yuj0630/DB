@@ -1,0 +1,122 @@
+## ARPPU
+
+select avg(revenue)
+from (select customer_id
+     , sum(price) as revenue
+     from *
+     where purchased_at >= '/해당 달/'
+     and purchased_at < '/다음 달/'
+     group by 1) foo
+
+## MAU
+
+select count(distinct customer_id)
+from *
+where visited_at >= '/해당 달/'
+  and visited_at < '/다음 달/'
+limit 10
+
+## DAU
+
+select avg(users)
+from (
+SELECT data_format(visited_at - interval 9 hour, '%Y-%m-%d') as date
+      ,count(distinct customer_id) as users
+FROM *
+WHERE visited_at >= '/오늘/'
+  and visited_at < '/내일/'
+GROUP BY 1
+ORDER BY 1) foo
+
+## WAU
+
+select avg(users)
+from (
+SELECT data_format(visited_at - interval 9 hour, '%Y-%m-%d') as date
+      ,count(distinct customer_id) as users
+FROM *
+WHERE visited_at >= '/이번 주/'
+  and visited_at < '/다음 주/'
+GROUP BY 1
+ORDER BY 1) foo
+
+## 시간대별 revenue
+
+select hour, avg(revenue)
+from (
+select data_format(purchased_at - interval 9 hour, '%Y-%m-%d') as date
+     , data_format(purchased_at - interval 9 hour, '%H') as hour_at
+     , sum(price) as revenue)
+from *
+where purchased_at <= '/이번 달/'
+  and purchased_at > '/다음 달/'
+group by 1, 2
+order by 1) foo
+
+## grouping
+
+select case when length(gender) < 1 then 'others'
+            else gender end as gender
+      ,case when age <= 20 then '0~20세 이하'
+            when age <= 30 then '20~30세 이하'
+            when age <= 40 then '30~40세 이하'
+            when age <= 50 then '40~50세 이하'
+            when age <= 60 then '50~60세 이하'
+            when age >= 60 then '60세 이상
+            end as age
+      ,count(*)
+from (*)
+group by 1, 2
+
+## segment별 분류
+ 
+select concat(case when length(gender) < 1 then '기타'
+            when gender = 'others' then '기타'
+            when gender = 'M' then '남성'
+            when gender = 'F' then '여성'
+            end
+      ,case when age <= 20 then '0~20세 이하'
+            when age <= 30 then '20~30세 이하'
+            when age <= 40 then '30~40세 이하'
+            when age <= 50 then '40~50세 이하'
+            when age <= 60 then '50~60세 이하'
+            when age >= 60 then '60세 이상
+            end) as segment
+      ,round(count(*)/(select count(*) from *) * 100, 2) as per
+from (*)
+group by 1, 2
+order by 2
+
+## segment별 매출
+
+select case when B.gender = 'M' then '남성'
+            when B.gender = 'F' then '여성'
+            when B.gender = 'Others' then '기타'
+            when length(B.gender) > 1 then '기타'
+            end as gender
+     , count(*)      
+     
+from table A
+left join table B
+on table_id A = table_id B
+  
+where A.purchased_at <= '/이번 달/'
+  and A.purchased_at > '/다음 달/'
+  
+group by 1
+
+## 일별 매출 증감률
+
+with today_revenue as (
+                      select data_format(purchased_at - interval 9 hour, '%Y-%m-%d') as d_date
+                            ,sum(price) as revenue
+                      from *
+                      where purchased_at >= '/이번 달/'
+                        and purchased_at < '/저번 달/'
+                      group by 1
+)
+
+select *
+     , revenue - lag(revenue) over(order by d_date asc) as diff_revenue
+     , round((revenue - lag(revenue) over(order by d_date asc))/lag(revenue) over(order by d_date asc)*100, 2) as ch_revenue
+from today_revenue

@@ -1,0 +1,185 @@
+## 서울시 최고, 최저 온도 구하기
+
+SELECT B.AREA, B.STD, B.MIN_TEMPER, B.MAX_TEMPER
+FROM(
+     SELECT A.AREA_CD
+          , MIN(A.MIN_TEMPER) AS MIN_TEMPER
+          , MAX(A.MAX_TEMPER) AS MAX_TEMPER
+       FROM TB_TEMPER A
+      WHERE A.AREA_CD = '108'
+    GROUP BY A.AREA_CD
+    ) A
+   , TB_TEMPER B
+ WHERE (B.AREA_CD = A.AREA_CD AND B.MIN_TEMPER = A.MIN_TEMPER)
+    OR (B.AREA_CD = A.AREA_CD AND B.MAX_TEMPER = A.MAX_TEMPER)
+
+## 1년 중 평균 일교차 구하기
+
+SELECT A.MM
+     , A.DAILY_CROSS
+FROM
+(
+   SELECT 
+         SUBSTR(A.STD_DE, 5, 2) AS MM
+       , ROUND(AVG(MAX_TEMPER-MIN_TEMPER), 2) AS DAIRY_CROSS
+    FROM TB_TEMPER A
+   WHERE A.AREA_CD = '108'
+   GROUP BY SUBSTR(A.STD_DE, 5, 2)
+   ORDER BY DAIRY_CROSS DESC
+) A
+WHERE ROWNUM <= 1;
+
+## 연도별 평균 온도 상승률
+
+SELECT SUBSTR(A.STD_DE, 1, 4) AS YYYY
+     , ROUND(AVG(AVG_TEMPER), 2) AS AVG_TEMPER
+  FROM TB_TEMPER A
+ WHERE A.AREA_CD = '108'
+ GROUP BY SUBSTR(A.STD_DE, 1, 4)
+ ORDER BY SUBSTR(A.STD_DE, 1, 4)
+ 
+ 
+// 10년 단위 평균기온
+SELECT 
+      CASE
+      WHEN YYYY BETWEEN '1900' AND '1909' THEN '1910년대'
+      WHEN YYYY BETWEEN '1910' AND '1919' THEN '1920년대'
+      WHEN YYYY BETWEEN '1920' AND '1929' THEN '1930년대'
+      ~
+      WHEN YYYY BETWEEN '2020' AND '2029' THEN '2020년대'
+      END AS "연대"
+    , ROUND(AVG(AVG_TEMPER), 2) AS "평균기온"
+ FROM
+    (
+     SELECT SUBSTR(A.STD_DE, 1, 4) AS YYYY
+          , ROUND(AVG(AVG_TEMPER), 2) AS AVG_TEMPER
+       FROM TB_TEMPER A
+      WHERE A.AREA_CD = '108'
+      GROUP BY SUBSTR(A.STD_DE, 1, 4)
+      ORDER BY SUBSTR(A.STD_DE, 1, 4)
+     )
+GROUP BY CASE
+         WHEN YYYY BETWEEN '1900' AND '1909' THEN '1910년대'
+         WHEN YYYY BETWEEN '1910' AND '1919' THEN '1920년대'
+         WHEN YYYY BETWEEN '1920' AND '1929' THEN '1930년대'
+         ~
+         WHEN YYYY BETWEEN '2020' AND '2029' THEN '2020년대'
+         END AS "연대"
+;
+
+## 전체 인구별 연령대 비율
+
+SELECT AGRDE_SE_CD
+     , SUM(POPLTN_CNT) AGRDE_POPLTN_CNT
+  FROM TB_POPLTN
+ WHERE ABMINIST_ZONE_NO LIKE '__000000'
+   AND POPLTN_SE_CD = 'T'
+   AND STD_MT = '202010'
+ GROUP BY AGRDE_SE_CD
+ ORDER BY AGRDE_SE_CD
+ ;
+
+## 전체 인구 성별 비율
+
+SELECT A.POPLTN_SE_CD
+     , SUM(A.POPLTN_CNT) AGRDE_POPLTN_CNT
+  FROM TB_POPLTN A
+ WHERE A.ADMINIST_ZONE_NO LIKE '__000000'
+   AND A.POPLTN_SE_CD IN ('M', 'F')
+   AND A.STD_MT = '202010'
+ GROUP BY A.POPLTN_SE_CD
+ ORDER BY A.POPLTN_SE_CD
+ ;
+
+## 연령대별 인구비율 높은 지역 구하기
+
+SELECT A.AGRDE_SE_CD, A.ADMINIST_ZONE_NO, A.ADMINIST_ZONE_NM, A.POPLTN_CNT, A."비율", A.NUM
+  FROM
+     (
+     SELECT A.AGRDE_SE_CD
+          , A.ADMINIST_ZONE_NO
+          , A.ADMINIST_ZONE_NM
+          , A.POPLTN_CNT
+          , A."비율"
+          , ROW_NUMBER() OVER(PARTITION BY A.AGRDE_SE_CD ORDER BY A."비율" DESC) AS RNUM
+       FROM
+          (
+           SELECT
+                 A.AGRDE_SE_CD
+               , A.ADMINIST_ZONE_NO
+               , A.ADMINIST_ZONE_NM
+               , A.POPLTN_CNT
+               , ROUND(RATIO_TO_REPORT(POPLTN_CNT) OVER(PARTITION BY ADMINIST_ZONE_NO) * 100, 2) AS "비율"
+             FROM
+                (
+                SELECT
+                       A.AGRDE_SE_CD
+                     , A.ADMINIST_ZONE_NO
+                     , A.ADMINIST_ZONE_NM
+                     , A.POPLTN_CNT
+                  FROM TB_POPLTN A
+                 WHERE A.ADMINIST_ZONE_NO NOT LIKE '___00000'
+                   AND A.POPLTN_SE_CD IN ('T')
+                   AND A.POPLTN_CNT > 0
+                   AND A.STD_MT = '202010'
+                 ORDER BY POPLTN_CNT DESC
+                 ) A
+          ) A
+  ) A        
+ WHERE RNUM = 1;
+
+## 승하차 인원이 많고 적은 역 구하기
+
+SELECT A.STATN_NO
+     , A.STATN_NM
+     , A.HO_LN
+     , TKCAR_GFF_SE_CD
+     , SUM(A.NMPR_CNT) AS NMPR_CNT
+  FROM TB_PBTRNSP A
+ WHERE A.STD_MT = '202010'
+ GROUP BY A.STATN_NO, A.STATN_NM, A.HO_LN, A.TKCAR_GFF_SE_CD
+ ORDER BY NMPR_CNT DESC;
+
+##  출근시간대 하차 인원 많은 역
+
+SELECT
+     A.STATN_NO
+   , A.STATN)NM
+   , A.HO_LN
+   , NMPR_CNT
+  FROM
+     (
+      SELECT A.STATN_NO
+           , A.STATN_NM
+           , A.HO_LN
+           , SUM(A.NMPR_CNT) AS NMPR_CNT
+        FROM TB_PBTRNSP A
+       WHERE A.STD_MT = '202010'
+         AND A.BEGIN_TIME = '0800'
+         AND A.END_TIME = '0900'
+         AND A.TKCAR_GFF_SE_CD = 'GF'
+       GROUP BY A.STATN_NO, A.STATN_NM, A.HO_LN
+       ORDER BY NMPR_CNT DESC
+       ) A
+WHERE ROWNUM <= 10;
+
+## 특정 시간 승차 인원 많은 역
+
+SELECT
+     A.STATN_NO
+   , A.STATN)NM
+   , A.HO_LN
+   , NMPR_CNT
+  FROM 
+     (
+      SELECT A.STATN_NO
+           , A.STATN_NM
+           , A.HO_LN
+           , SUM(A.NMPR_CNT) AS NMPR_CNT
+        FROM TB_PBTRNSP A
+       WHERE A.STD_MT = '202010'
+         AND ((A.BEGIN_TIME, A.END_TIME) IN ('특정 시간'), ('특정 시간'))
+         AND A.TKCAR_GFF_SE_CD = 'TK'
+       GROUP BY A.STATN_NO, A.STATN_NM, A.HO_LN
+      ) A
+WHERE ROWNUM <= 10;
